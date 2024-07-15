@@ -421,7 +421,7 @@ SLANG_API SlangTypeKind spReflectionType_GetKind(SlangReflectionType* inType)
         {
             return SLANG_TYPE_KIND_STRUCT;
         }
-        else if (declRef.is<GlobalGenericParamDecl>())
+        else if (declRef.is<GlobalGenericParamDecl>() || declRef.is<GenericTypeParamDecl>())
         {
             return SLANG_TYPE_KIND_GENERIC_TYPE_PARAMETER;
         }
