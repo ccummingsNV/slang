@@ -798,6 +798,18 @@ public:
 StructTypeLayout* getScopeStructLayout(
     ScopeLayout*  programLayout);
 
+class FunctionLayout : public ScopeLayout
+{
+public:
+    // The corresponding function declaration
+    DeclRef<FuncDecl> funcRef;
+
+    DeclRef<FuncDecl> getFuncDeclRef() { return funcRef; }
+    FuncDecl* getFuncDecl() { return funcRef.getDecl(); }
+
+    RefPtr<TypeLayout> resultLayout;
+};
+
 // Layout information for a single shader entry point
 // within a program
 //
@@ -1322,6 +1334,10 @@ RefPtr<TypeLayout> createTypeLayoutWith(
     Type*                       type);
 
 //
+
+RefPtr<FunctionLayout> createFunctionLayout(
+    TypeLayoutContext&          context,
+    DeclRef<FuncDecl>           func);
 
     /// Create a layout for a parameter-group type (a `ConstantBuffer` or `ParameterBlock`).
 RefPtr<TypeLayout> createParameterGroupTypeLayout(

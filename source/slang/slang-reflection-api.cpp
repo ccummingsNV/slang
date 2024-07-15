@@ -65,6 +65,16 @@ static inline SlangReflectionFunction* convert(DeclRef<FuncDecl> var)
     return (SlangReflectionFunction*) var.declRefBase;
 }
 
+static inline FunctionLayout* convert(SlangReflectionFunctionLayout* layout)
+{
+    return (FunctionLayout*) layout;
+}
+
+static inline SlangReflectionFunctionLayout* convert(FunctionLayout* layout)
+{
+    return (SlangReflectionFunctionLayout*) layout;
+}
+
 static inline Decl* convert(SlangReflectionVariable* var)
 {
     return (Decl*) var;
@@ -2724,6 +2734,51 @@ SLANG_API SlangReflectionVariable* spReflectionFunction_GetParameterByIndex(Slan
     auto params = func.getDecl()->getParameters();
     if (index < params.getCount())
         return convert(static_cast<Decl*>(params[index]));
+
+    return nullptr;
+}
+
+// Function Layout Reflection
+
+SLANG_API SlangReflectionFunction* spReflectionFunctionLayout_GetFunction(SlangReflectionFunctionLayout* inLayout)
+{
+    auto layout = convert(inLayout);
+    if (!layout) return nullptr;
+
+    return convert(layout->getFuncDeclRef());
+}
+
+SLANG_API SlangReflectionTypeLayout* spReflectionFunctionLayout_GetReturnTypeLayout(SlangReflectionFunctionLayout* inLayout)
+{
+    auto layout = convert(inLayout);
+    if (!layout) return nullptr;
+
+    return convert(layout->resultLayout);
+}
+
+SLANG_API unsigned int spReflectionFunctionLayout_GetParameterCount(SlangReflectionFunctionLayout* inLayout)
+{
+    auto layout = convert(inLayout);
+    if (!layout) return 0;
+
+    auto paramsLayout = as<StructTypeLayout>(layout->parametersLayout->getTypeLayout());
+    if (!paramsLayout) return 0;
+
+    return (unsigned int) paramsLayout->fields.getCount();
+}
+
+SLANG_API SlangReflectionVariableLayout* spReflectionFunctionLayout_GetParameterByIndex(SlangReflectionFunctionLayout* inLayout, unsigned index)
+{
+    auto layout = convert(inLayout);
+    if (!layout) return nullptr;
+
+    auto paramsLayout = as<StructTypeLayout>(layout->parametersLayout->getTypeLayout());
+    if (!paramsLayout) return nullptr;
+
+    if (index < paramsLayout->fields.getCount())
+    {
+        return convert(paramsLayout->fields[index]);
+    }
 
     return nullptr;
 }

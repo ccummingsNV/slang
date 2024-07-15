@@ -1839,6 +1839,19 @@ TypeLayout* TargetRequest::getTypeLayout(Type* type)
     return result.Ptr();
 }
 
+FunctionLayout* TargetRequest::getFunctionLayout(DeclRef<FuncDecl> funcDecl)
+{
+    SLANG_AST_BUILDER_RAII(getLinkage()->getASTBuilder());
+    auto layoutContext = getInitialLayoutContextForTarget(this, nullptr);
+
+    RefPtr<FunctionLayout> result;
+    if (functionLayouts.tryGetValue(funcDecl.declRefBase, result))
+        return result.Ptr();
+    result = createFunctionLayout(layoutContext, funcDecl);
+    functionLayouts[funcDecl.declRefBase] = result;
+    return result.Ptr();
+}
+
 //
 // TranslationUnitRequest
 //

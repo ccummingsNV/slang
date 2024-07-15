@@ -2550,6 +2550,13 @@ extern "C"
     SLANG_API bool spReflectionFunction_HasParameterDefault(SlangReflectionFunction* func, unsigned index);
     SLANG_API SlangReflectionVariable* spReflectionFunction_GetParameterByIndex(SlangReflectionFunction* func, unsigned index);
 
+    // Function Layout Reflection
+
+    SLANG_API SlangReflectionFunction* spReflectionFunctionLayout_GetFunction(SlangReflectionFunctionLayout* func);
+    SLANG_API SlangReflectionTypeLayout* spReflectionFunctionLayout_GetReturnTypeLayout(SlangReflectionFunctionLayout* func);
+    SLANG_API unsigned int spReflectionFunctionLayout_GetParameterCount(SlangReflectionFunctionLayout* func);
+    SLANG_API SlangReflectionVariableLayout* spReflectionFunctionLayout_GetParameterByIndex(SlangReflectionFunctionLayout* func, unsigned index);
+
     /** Get the stage that a variable belongs to (if any).
 
     A variable "belongs" to a specific stage when it is a varying input/output
@@ -2639,6 +2646,7 @@ extern "C"
     SLANG_API SlangReflectionFunction* spReflection_FindFunctionByNameAndOverloadIndex(SlangReflection* reflection, char const* name, int overload);
     SLANG_API unsigned int spReflection_getFunctionCount(SlangReflection* reflection);
     SLANG_API SlangReflectionFunction* spReflection_getFunctionByIndex(SlangReflection* reflection, unsigned int index);
+    SLANG_API SlangReflectionFunctionLayout* spReflection_GetFunctionLayout(SlangReflection* reflection, SlangReflectionFunction* reflectionFunc, SlangLayoutRules rules);
 
     SLANG_API SlangUInt spReflection_getEntryPointCount(SlangReflection* reflection);
     SLANG_API SlangReflectionEntryPoint* spReflection_getEntryPointByIndex(SlangReflection* reflection, SlangUInt index);
