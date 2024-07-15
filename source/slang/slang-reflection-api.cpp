@@ -55,6 +55,16 @@ static inline SpecializationParamLayout* convert(SlangReflectionTypeParameter * 
     return (SpecializationParamLayout*) typeParam;
 }
 
+static inline DeclRef<FuncDecl> convert(SlangReflectionFunction* var)
+{
+    return DeclRef<FuncDecl>((DeclRefBase*) var);
+}
+
+static inline SlangReflectionFunction* convert(DeclRef<FuncDecl> var)
+{
+    return (SlangReflectionFunction*) var.declRefBase;
+}
+
 static inline Decl* convert(SlangReflectionVariable* var)
 {
     return (Decl*) var;
@@ -474,6 +484,50 @@ SLANG_API SlangReflectionVariable* spReflectionType_GetFieldByIndex(SlangReflect
     return nullptr;
 }
 
+SLANG_API unsigned int spReflectionType_GetMethodCount(SlangReflectionType* inType)
+{
+    auto type = convert(inType);
+    if(!type) return 0;
+
+    if(auto declRefType = as<DeclRefType>(type))
+    {
+        auto declRef = declRefType->getDeclRef();
+        if(auto structDeclRef = declRef.as<StructDecl>())
+        {
+            auto module = getModule(declRef.getDecl());
+            if (!module->getLayout(0, nullptr))
+                return 0;
+            return (unsigned int)getMembersOfType<FuncDecl>(
+                    module->getLinkage()->getASTBuilder(),
+                    structDeclRef,
+                    MemberFilterStyle::Instance)
+                .getCount();
+        }
+    }
+
+    return 0;
+}
+
+SLANG_API SlangReflectionFunction* spReflectionType_GetMethodByIndex(SlangReflectionType* inType, unsigned index)
+{
+    auto type = convert(inType);
+    if(!type) return 0;
+
+    if(auto declRefType = as<DeclRefType>(type))
+    {
+        auto declRef = declRefType->getDeclRef();
+        if( auto structDeclRef = declRef.as<StructDecl>())
+        {
+            auto methods = getMembersOfType<FuncDecl>(
+                getModule(declRef.getDecl())->getLinkage()->getASTBuilder(), structDeclRef, MemberFilterStyle::Instance);
+            auto funcDeclRef = methods[index];
+            return convert(funcDeclRef);
+        }
+    }
+
+    return nullptr;
+}
+
 SLANG_API size_t spReflectionType_GetElementCount(SlangReflectionType* inType)
 {
     auto type = convert(inType);
@@ -761,6 +815,83 @@ SLANG_API SlangReflectionType * spReflection_FindTypeByName(SlangReflection * re
     }
 }
 
+SLANG_API SlangReflectionFunction* spReflection_FindFunctionByName(SlangReflection* reflection, char const* name)
+{
+    return spReflection_FindFunctionByNameAndOverloadIndex(reflection, name, -1);
+}
+SLANG_API SlangReflectionFunction* spReflection_FindFunctionByNameAndOverloadIndex(SlangReflection* reflection, char const* name, int overload)
+{
+    auto programLayout = convert(reflection);
+    auto program = programLayout->getProgram();
+
+    // TODO: We should extend this API to support getting error messages
+    // when type lookup fails.
+    //
+    Slang::DiagnosticSink sink(
+        programLayout->getTargetReq()->getLinkage()->getSourceManager(),
+        Lexer::sourceLocationLexer);
+
+    try
+    {
+        return convert(program->getFuncFromString(name, &sink, overload));
+    }
+    catch( ... )
+    {
+        return nullptr;
+    }
+}
+
+SLANG_API unsigned int spReflection_getFunctionCount(SlangReflection* reflection)
+{
+    auto programLayout = convert(reflection);
+    auto program = programLayout->getProgram();
+
+    Index result = 0;
+    for (auto module : program->getModuleDependencies())
+    {
+        result += module->getModuleDecl()->getMembersOfType<FuncDecl>().getCount();
+    }
+
+    return (unsigned int) result;
+}
+
+SLANG_API SlangReflectionFunction* spReflection_getFunctionByIndex(SlangReflection* reflection, unsigned int index)
+{
+    auto programLayout = convert(reflection);
+    auto program = programLayout->getProgram();
+
+    SlangReflectionFunction *result = nullptr;
+    for (auto module : program->getModuleDependencies())
+    {
+        auto functions = module->getModuleDecl()->getMembersOfType<FuncDecl>();
+        unsigned int count = (unsigned int) functions.getCount();
+        if (index < count)
+        {
+            result = convert(DeclRef<FuncDecl>(functions[index]));
+            break;
+        }
+        else
+        {
+            index -= count;
+        }
+    }
+
+    return result;
+}
+
+SLANG_API SlangReflectionFunctionLayout* spReflection_GetFunctionLayout(
+    SlangReflection* reflection,
+    SlangReflectionFunction* inFunc,
+    SlangLayoutRules /*rules*/)
+{
+    auto context = convert(reflection);
+    auto funcDecl = convert(inFunc);
+    auto targetReq = context->getTargetReq();
+
+    auto functionLayout = targetReq->getFunctionLayout(funcDecl);
+    return convert(functionLayout);
+}
+
 SLANG_API SlangReflectionTypeLayout* spReflection_GetTypeLayout(
     SlangReflection* reflection,
     SlangReflectionType* inType,
@@ -938,6 +1069,34 @@ SLANG_API SlangInt spReflectionTypeLayout_findFieldIndexByName(SlangReflectionTy
     }
 
     return -1;
+}
+
+SLANG_API unsigned spReflectionTypeLayout_GetMethodCount(SlangReflectionTypeLayout* inTypeLayout)
+{
+    auto typeLayout = convert(inTypeLayout);
+    return spReflectionType_GetMethodCount(convert(typeLayout->getType()));
+}
+
+SLANG_API SlangReflectionFunctionLayout* spReflectionTypeLayout_GetMethodByIndex(SlangReflectionTypeLayout* inTypeLayout, unsigned index)
+{
+    auto typeLayout = convert(inTypeLayout);
+    auto type = typeLayout->getType();
+
+    if(auto declRefType = as<DeclRefType>(type))
+    {
+        auto declRef = declRefType->getDeclRef();
+        if( auto structDeclRef = declRef.as<StructDecl>())
+        {
+            auto module = getModule(declRef.getDecl());
+            auto methods = getMembersOfType<FuncDecl>(module->getLinkage()->getASTBuilder(), structDeclRef, MemberFilterStyle::Instance);
+            auto funcDeclRef = methods[index];
+            auto programLayout = (Slang::ProgramLayout*)module->getLayout(0, nullptr);
+            auto functionLayout = programLayout->getTargetReq()->getFunctionLayout(funcDeclRef);
+            return convert(functionLayout);
+        }
+    }
+
+    return nullptr;
 }
 
 SLANG_API SlangReflectionVariableLayout* spReflectionTypeLayout_GetExplicitCounter(SlangReflectionTypeLayout* inTypeLayout)
@@ -2515,6 +2674,59 @@ SLANG_API SlangInt spReflectionTypeLayout_getSubObjectRangeDescriptorRangeSpaceO
     return Slang::_getSubObjectDescriptorRange(subObjectRange, bindingRangeIndexInSubObject).spaceOffset;
 }
 #endif
+
+
+// Function reflection
+
+SLANG_API char const* spReflectionFunction_GetName(SlangReflectionFunction* inFunc)
+{
+    auto func = convert(inFunc);
+    if (!func) return nullptr;
+
+    return getCstr(func.getDecl()->getName());
+}
+
+SLANG_API SlangReflectionType* spReflectionFunction_GetReturnType(SlangReflectionFunction* inFunc)
+{
+    auto func = convert(inFunc);
+    if (!func) return nullptr;
+
+    return convert(func.getDecl()->returnType);
+}
+
+SLANG_API unsigned int spReflectionFunction_GetParameterCount(SlangReflectionFunction* inFunc)
+{
+    auto func = convert(inFunc);
+    if (!func) return 0;
+
+    return (unsigned int) func.getDecl()->getParameters().getCount();
+}
+
+SLANG_API bool spReflectionFunction_HasParameterDefault(SlangReflectionFunction* inFunc, unsigned index)
+{
+    auto func = convert(inFunc);
+    if (!func) return false;
+
+    auto params = func.getDecl()->getParameters();
+    if (index < params.getCount())
+    {
+        return params[index]->initExpr != nullptr;
+    }
+
+    return false;
+}
+
+SLANG_API SlangReflectionVariable* spReflectionFunction_GetParameterByIndex(SlangReflectionFunction* inFunc, unsigned index)
+{
+    auto func = convert(inFunc);
+    if (!func) return nullptr;
+
+    auto params = func.getDecl()->getParameters();
+    if (index < params.getCount())
+        return convert(static_cast<Decl*>(params[index]));
+
+    return nullptr;
+}
 
 // Variable Reflection
 

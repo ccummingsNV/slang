@@ -2229,6 +2229,57 @@ Type* ComponentType::getTypeFromString(
     return type;
 }
 
+DeclRef<FuncDecl> ComponentType::getFuncFromString(
+            String const&   funcStr,
+            DiagnosticSink* sink,
+            int overload)
+{
+    auto astBuilder = getLinkage()->getASTBuilder();
+    Scope* scope = _getOrCreateScopeForLegacyLookup(astBuilder);
+    auto linkage = getLinkage();
+    SLANG_AST_BUILDER_RAII(linkage->getASTBuilder());
+
+    Expr* funcExpr = linkage->parseTermString(funcStr, scope);
+
+    SharedSemanticsContext sharedSemanticsContext(
+        linkage,
+        nullptr,
+        sink);
+    SemanticsVisitor visitor(&sharedSemanticsContext);
+
+    auto funcOut = visitor.CheckTerm(funcExpr);
+
+    DeclRef<FuncDecl> result;
+    if (auto declRefE = as<DeclRefExpr>(funcOut))
+    {
+        result = declRefE->declRef.as<FuncDecl>();
+    }
+    if (!result)
+    {
+        auto overloadExpr = as<OverloadedExpr>(funcOut);
+        if (!overloadExpr || !overloadExpr->lookupResult2.isValid())
+            return result;
+
+        const LookupResult &lookup = overloadExpr->lookupResult2;
+        
+        if (!lookup.isOverloaded())
+            return lookup.item.declRef.as<FuncDecl>();
+
+        int count = 0;
+        for (auto item : lookup)
+        {
+            if (auto funcDecl = item.declRef.as<FuncDecl>())
+            {
+                if (count == overload)
+                    return funcDecl;
+                count++;
+            }
+        }
+    }
+
+    return result;
+}
+
 static void collectExportedConstantInContainer(
     Dictionary<String, IntVal*>& dict,
     ASTBuilder* builder,

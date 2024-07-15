@@ -415,6 +415,11 @@ namespace Slang
         Type* getTypeFromString(
             String const&   typeStr,
             DiagnosticSink* sink);
+        
+        DeclRef<FuncDecl> getFuncFromString(
+            String const&   funcStr,
+            DiagnosticSink* sink,
+            int overload = -1);
 
         Dictionary<String, IntVal*>& getMangledNameToIntValMap();
         ConstantIntVal* tryFoldIntVal(IntVal* intVal);

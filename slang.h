@@ -2111,6 +2111,8 @@ extern "C"
     typedef struct SlangReflectionVariableLayout    SlangReflectionVariableLayout;
     typedef struct SlangReflectionTypeParameter     SlangReflectionTypeParameter;
     typedef struct SlangReflectionUserAttribute     SlangReflectionUserAttribute;
+    typedef struct SlangReflectionFunction          SlangReflectionFunction;
+    typedef struct SlangReflectionFunctionLayout    SlangReflectionFunctionLayout;
 
     /*
     Type aliases to maintain backward compatibility.
@@ -2413,6 +2415,9 @@ extern "C"
     SLANG_API unsigned int spReflectionType_GetFieldCount(SlangReflectionType* type);
     SLANG_API SlangReflectionVariable* spReflectionType_GetFieldByIndex(SlangReflectionType* type, unsigned index);
 
+    SLANG_API unsigned int spReflectionType_GetMethodCount(SlangReflectionType* type);
+    SLANG_API SlangReflectionFunction* spReflectionType_GetMethodByIndex(SlangReflectionType* type, unsigned index);
+
         /** Returns the number of elements in the given type.
 
         This operation is valid for vector and array types. For other types it returns zero.
@@ -2451,6 +2456,9 @@ extern "C"
     SLANG_API SlangReflectionVariableLayout* spReflectionTypeLayout_GetFieldByIndex(SlangReflectionTypeLayout* type, unsigned index);
 
     SLANG_API SlangInt spReflectionTypeLayout_findFieldIndexByName(SlangReflectionTypeLayout* typeLayout, const char* nameBegin, const char* nameEnd);
+
+    SLANG_API unsigned spReflectionTypeLayout_GetMethodCount(SlangReflectionTypeLayout* typeLayout);
+    SLANG_API SlangReflectionFunctionLayout* spReflectionTypeLayout_GetMethodByIndex(SlangReflectionTypeLayout* typeLayout, unsigned index);
 
     SLANG_API SlangReflectionVariableLayout* spReflectionTypeLayout_GetExplicitCounter(SlangReflectionTypeLayout* typeLayout);
 
@@ -2533,6 +2541,14 @@ extern "C"
 
     SLANG_API char const* spReflectionVariableLayout_GetSemanticName(SlangReflectionVariableLayout* var);
     SLANG_API size_t spReflectionVariableLayout_GetSemanticIndex(SlangReflectionVariableLayout* var);
+
+    // Function Reflection
+
+    SLANG_API char const* spReflectionFunction_GetName(SlangReflectionFunction* func);
+    SLANG_API SlangReflectionType* spReflectionFunction_GetReturnType(SlangReflectionFunction* func);
+    SLANG_API unsigned int spReflectionFunction_GetParameterCount(SlangReflectionFunction* func);
+    SLANG_API bool spReflectionFunction_HasParameterDefault(SlangReflectionFunction* func, unsigned index);
+    SLANG_API SlangReflectionVariable* spReflectionFunction_GetParameterByIndex(SlangReflectionFunction* func, unsigned index);
 
     /** Get the stage that a variable belongs to (if any).
 
@@ -2618,6 +2634,11 @@ extern "C"
 
     SLANG_API SlangReflectionType* spReflection_FindTypeByName(SlangReflection* reflection, char const* name);
     SLANG_API SlangReflectionTypeLayout* spReflection_GetTypeLayout(SlangReflection* reflection, SlangReflectionType* reflectionType, SlangLayoutRules rules);
+
+    SLANG_API SlangReflectionFunction* spReflection_FindFunctionByName(SlangReflection* reflection, char const* name);
+    SLANG_API SlangReflectionFunction* spReflection_FindFunctionByNameAndOverloadIndex(SlangReflection* reflection, char const* name, int overload);
+    SLANG_API unsigned int spReflection_getFunctionCount(SlangReflection* reflection);
+    SLANG_API SlangReflectionFunction* spReflection_getFunctionByIndex(SlangReflection* reflection, unsigned int index);
 
     SLANG_API SlangUInt spReflection_getEntryPointCount(SlangReflection* reflection);
     SLANG_API SlangReflectionEntryPoint* spReflection_getEntryPointByIndex(SlangReflection* reflection, SlangUInt index);
