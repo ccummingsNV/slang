@@ -2558,6 +2558,18 @@ SLANG_API SlangReflectionModifier* spReflectionVariable_FindModifier(SlangReflec
     case SLANG_MODIFIER_SHARED:
         modifier = var->findModifier<HLSLEffectSharedModifier>();
         break;
+    case SLANG_MODIFIER_IN:
+        modifier = var->findModifier<InModifier>();
+        break;
+    case SLANG_MODIFIER_OUT:
+        modifier = var->findModifier<OutModifier>();
+        break;
+    case SLANG_MODIFIER_INOUT:
+        modifier = var->findModifier<InOutModifier>();
+        break;
+    case SLANG_MODIFIER_NODIFF:
+        modifier = var->findModifier<NoDiffModifier>();
+        break;
 
     default:
         return nullptr;

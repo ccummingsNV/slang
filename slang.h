@@ -2384,6 +2384,10 @@ extern "C"
     enum SlangModifierID : SlangModifierIDIntegral
     {
         SLANG_MODIFIER_SHARED,
+        SLANG_MODIFIER_IN,
+        SLANG_MODIFIER_OUT,
+        SLANG_MODIFIER_INOUT,
+        SLANG_MODIFIER_NODIFF,
     };
 
     // User Attribute
@@ -3254,7 +3258,11 @@ namespace slang
     {
         enum ID : SlangModifierIDIntegral
         {
-            Shared = SLANG_MODIFIER_SHARED,
+            Shared  = SLANG_MODIFIER_SHARED,
+            In      = SLANG_MODIFIER_IN,
+            Out     = SLANG_MODIFIER_OUT,
+            InOut   = SLANG_MODIFIER_INOUT,
+            NoDiff  = SLANG_MODIFIER_NODIFF,
         };
     };
 
