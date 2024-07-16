@@ -1839,6 +1839,19 @@ TypeLayout* TargetRequest::getTypeLayout(Type* type)
     return result.Ptr();
 }
 
+FunctionLayout* TargetRequest::getFunctionLayout(DeclRef<FuncDecl> funcDecl)
+{
+    SLANG_AST_BUILDER_RAII(getLinkage()->getASTBuilder());
+    auto layoutContext = getInitialLayoutContextForTarget(this, nullptr);
+
+    RefPtr<FunctionLayout> result;
+    if (functionLayouts.tryGetValue(funcDecl.declRefBase, result))
+        return result.Ptr();
+    result = createFunctionLayout(layoutContext, funcDecl);
+    functionLayouts[funcDecl.declRefBase] = result;
+    return result.Ptr();
+}
+
 //
 // TranslationUnitRequest
 //
@@ -2275,6 +2288,56 @@ DeclRef<Decl> ComponentType::findDeclFromString(
     }
 
     m_decls[name] = result;
+    return result;
+}
+
+DeclRef<FuncDecl> ComponentType::getFuncFromString(
+            String const&   funcStr,
+            DiagnosticSink* sink,
+            int overload)
+{
+    auto astBuilder = getLinkage()->getASTBuilder();
+    Scope* scope = _getOrCreateScopeForLegacyLookup(astBuilder);
+    auto linkage = getLinkage();
+    SLANG_AST_BUILDER_RAII(linkage->getASTBuilder());
+
+    Expr* funcExpr = linkage->parseTermString(funcStr, scope);
+    SharedSemanticsContext sharedSemanticsContext(
+        linkage,
+        nullptr,
+        sink);
+    SemanticsVisitor visitor(&sharedSemanticsContext);
+
+    auto funcOut = visitor.CheckTerm(funcExpr);
+
+    DeclRef<FuncDecl> result;
+    if (auto declRefE = as<DeclRefExpr>(funcOut))
+    {
+        result = declRefE->declRef.as<FuncDecl>();
+    }
+    if (!result)
+    {
+        auto overloadExpr = as<OverloadedExpr>(funcOut);
+        if (!overloadExpr || !overloadExpr->lookupResult2.isValid())
+            return result;
+
+        const LookupResult &lookup = overloadExpr->lookupResult2;
+        
+        if (!lookup.isOverloaded())
+            return lookup.item.declRef.as<FuncDecl>();
+
+        int count = 0;
+        for (auto item : lookup)
+        {
+            if (auto funcDecl = item.declRef.as<FuncDecl>())
+            {
+                if (count == overload)
+                    return funcDecl;
+                count++;
+            }
+        }
+    }
+
     return result;
 }
 

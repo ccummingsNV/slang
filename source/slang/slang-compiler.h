@@ -46,6 +46,7 @@ namespace Slang
     class TargetProgram;
     class TargetRequest;
     class TypeLayout;
+    class FunctionLayout;
     class Artifact;
 
     enum class CompilerMode
@@ -415,6 +416,11 @@ namespace Slang
         Type* getTypeFromString(
             String const&   typeStr,
             DiagnosticSink* sink);
+        
+        DeclRef<FuncDecl> getFuncFromString(
+            String const&   funcStr,
+            DiagnosticSink* sink,
+            int overload = -1);
 
         DeclRef<Decl> findDeclFromString(
             String const& name,
@@ -1787,6 +1793,10 @@ namespace Slang
         Dictionary<Type*, RefPtr<TypeLayout>>& getTypeLayouts() { return typeLayouts; }
 
         TypeLayout* getTypeLayout(Type* type);
+
+        Dictionary<DeclRefBase*, RefPtr<FunctionLayout>> functionLayouts;
+
+        FunctionLayout* getFunctionLayout(DeclRef<FuncDecl> funcDecl);
 
         CompilerOptionSet& getOptionSet() { return optionSet; }
 

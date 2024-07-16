@@ -5011,6 +5011,28 @@ RefPtr<TypeLayout> createTypeLayoutWith(
     return createTypeLayout(c, type);
 }
 
+RefPtr<FunctionLayout> createFunctionLayout(
+    TypeLayoutContext&          context,
+    DeclRef<FuncDecl>           funcDecl)
+{
+    RefPtr<FunctionLayout> typeLayout = new FunctionLayout();
+    typeLayout->funcRef = funcDecl;
+    typeLayout->resultLayout = _createTypeLayout(context, getResultType(context.astBuilder, funcDecl)).layout;
+
+    StructTypeLayoutBuilder paramLayoutBuilder;
+    paramLayoutBuilder.beginLayout(nullptr, context.getRules());
+
+    for (auto param : getMembersOfType<ParamDecl>(context.astBuilder, funcDecl))
+    {
+        TypeLayoutResult paramResult = _createTypeLayout(context, getType(context.astBuilder, param), param.getDecl());
+        paramLayoutBuilder.addField(param, paramResult);
+    }
+
+    typeLayout->parametersLayout = new VarLayout();
+    typeLayout->parametersLayout->typeLayout = paramLayoutBuilder.getTypeLayoutResult().layout;
+
+    return typeLayout;
+}
 
 void TypeLayout::removeResourceUsage(LayoutResourceKind kind)
 {

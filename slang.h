@@ -2115,6 +2115,7 @@ extern "C"
     typedef struct SlangReflectionTypeParameter     SlangReflectionTypeParameter;
     typedef struct SlangReflectionUserAttribute     SlangReflectionUserAttribute;
     typedef struct SlangReflectionFunction          SlangReflectionFunction;
+    typedef struct SlangReflectionFunctionLayout    SlangReflectionFunctionLayout;
 
     /*
     Type aliases to maintain backward compatibility.
@@ -2394,6 +2395,9 @@ extern "C"
         SLANG_MODIFIER_EXPORT,
         SLANG_MODIFIER_EXTERN,
         SLANG_MODIFIER_DIFFERENTIABLE,
+        SLANG_MODIFIER_IN,
+        SLANG_MODIFIER_OUT,
+        SLANG_MODIFIER_INOUT,
     };
 
     // User Attribute
@@ -2418,6 +2422,9 @@ extern "C"
 
     SLANG_API unsigned int spReflectionType_GetFieldCount(SlangReflectionType* type);
     SLANG_API SlangReflectionVariable* spReflectionType_GetFieldByIndex(SlangReflectionType* type, unsigned index);
+
+    SLANG_API unsigned int spReflectionType_GetMethodCount(SlangReflectionType* type);
+    SLANG_API SlangReflectionFunction* spReflectionType_GetMethodByIndex(SlangReflectionType* type, unsigned index);
 
         /** Returns the number of elements in the given type.
 
@@ -2458,6 +2465,9 @@ extern "C"
     SLANG_API SlangReflectionVariableLayout* spReflectionTypeLayout_GetFieldByIndex(SlangReflectionTypeLayout* type, unsigned index);
 
     SLANG_API SlangInt spReflectionTypeLayout_findFieldIndexByName(SlangReflectionTypeLayout* typeLayout, const char* nameBegin, const char* nameEnd);
+
+    SLANG_API unsigned spReflectionTypeLayout_GetMethodCount(SlangReflectionTypeLayout* typeLayout);
+    SLANG_API SlangReflectionFunctionLayout* spReflectionTypeLayout_GetMethodByIndex(SlangReflectionTypeLayout* typeLayout, unsigned index);
 
     SLANG_API SlangReflectionVariableLayout* spReflectionTypeLayout_GetExplicitCounter(SlangReflectionTypeLayout* typeLayout);
 
@@ -2551,6 +2561,14 @@ extern "C"
     SLANG_API unsigned int spReflectionFunction_GetParameterCount(SlangReflectionFunction* func);
     SLANG_API SlangReflectionVariable* spReflectionFunction_GetParameter(SlangReflectionFunction* func, unsigned index);
     SLANG_API SlangReflectionType* spReflectionFunction_GetResultType(SlangReflectionFunction* func);
+    SLANG_API bool spReflectionFunction_HasParameterDefault(SlangReflectionFunction* func, unsigned index);
+
+
+    // Function Layout Reflection
+    SLANG_API SlangReflectionFunction* spReflectionFunctionLayout_GetFunction(SlangReflectionFunctionLayout* func);
+    SLANG_API SlangReflectionTypeLayout* spReflectionFunctionLayout_GetReturnTypeLayout(SlangReflectionFunctionLayout* func);
+    SLANG_API unsigned int spReflectionFunctionLayout_GetParameterCount(SlangReflectionFunctionLayout* func);
+    SLANG_API SlangReflectionVariableLayout* spReflectionFunctionLayout_GetParameterByIndex(SlangReflectionFunctionLayout* func, unsigned index);
 
     /** Get the stage that a variable belongs to (if any).
 
@@ -2641,6 +2659,10 @@ extern "C"
     SLANG_API SlangReflectionTypeLayout* spReflection_GetTypeLayout(SlangReflection* reflection, SlangReflectionType* reflectionType, SlangLayoutRules rules);
 
     SLANG_API SlangReflectionFunction* spReflection_FindFunctionByName(SlangReflection* reflection, char const* name);
+    SLANG_API SlangReflectionFunction* spReflection_FindFunctionByNameAndOverloadIndex(SlangReflection* reflection, char const* name, int overload);
+    SLANG_API unsigned int spReflection_getFunctionCount(SlangReflection* reflection);
+    SLANG_API SlangReflectionFunction* spReflection_getFunctionByIndex(SlangReflection* reflection, unsigned int index);
+    SLANG_API SlangReflectionFunctionLayout* spReflection_GetFunctionLayout(SlangReflection* reflection, SlangReflectionFunction* reflectionFunc, SlangLayoutRules rules);
 
     SLANG_API SlangUInt spReflection_getEntryPointCount(SlangReflection* reflection);
     SLANG_API SlangReflectionEntryPoint* spReflection_getEntryPointByIndex(SlangReflection* reflection, SlangUInt index);
@@ -2697,6 +2719,8 @@ namespace slang
     struct TypeReflection;
     struct VariableLayoutReflection;
     struct VariableReflection;
+    struct FunctionReflection;
+    struct FunctionLayoutReflection;
     
     struct UserAttribute
     {
@@ -2782,6 +2806,16 @@ namespace slang
         VariableReflection* getFieldByIndex(unsigned int index)
         {
             return (VariableReflection*) spReflectionType_GetFieldByIndex((SlangReflectionType*) this, index);
+        }
+
+        unsigned int getMethodCount()
+        {
+            return spReflectionType_GetMethodCount((SlangReflectionType*) this);
+        }
+
+        FunctionReflection* getMethodByIndex(unsigned int index)
+        {
+            return (FunctionReflection*) spReflectionType_GetMethodByIndex((SlangReflectionType*) this, index);
         }
 
         bool isArray() { return getKind() == TypeReflection::Kind::Array; }
@@ -2982,6 +3016,16 @@ namespace slang
         VariableLayoutReflection* getFieldByIndex(unsigned int index)
         {
             return (VariableLayoutReflection*) spReflectionTypeLayout_GetFieldByIndex((SlangReflectionTypeLayout*) this, index);
+        }
+
+        unsigned int getMethodCount()
+        {
+            return spReflectionTypeLayout_GetMethodCount((SlangReflectionTypeLayout*) this);
+        }
+
+        FunctionLayoutReflection* getMethodByIndex(unsigned int index)
+        {
+            return (FunctionLayoutReflection*) spReflectionTypeLayout_GetMethodByIndex((SlangReflectionTypeLayout*) this, index);
         }
 
         SlangInt findFieldIndexByName(char const* nameBegin, char const* nameEnd = nullptr)
@@ -3293,7 +3337,10 @@ namespace slang
             Export = SLANG_MODIFIER_EXPORT,
             Extern = SLANG_MODIFIER_EXTERN,
             Differentiable = SLANG_MODIFIER_DIFFERENTIABLE,
-        };
+            In      = SLANG_MODIFIER_IN,
+            Out     = SLANG_MODIFIER_OUT,
+            InOut   = SLANG_MODIFIER_INOUT,
+         };
     };
 
     struct VariableReflection
@@ -3449,6 +3496,44 @@ namespace slang
         Modifier* findModifier(Modifier::ID id)
         {
             return (Modifier*)spReflectionVariable_FindModifier((SlangReflectionVariable*)this, (SlangModifierID)id);
+        }
+
+        bool hasDefaultValue(unsigned paramIndex)
+        {
+            return spReflectionFunction_HasParameterDefault((SlangReflectionFunction*) this, paramIndex);
+        }
+    };
+
+    struct FunctionLayoutReflection
+    {
+        FunctionReflection* getFunction()
+        {
+            return (FunctionReflection*) spReflectionFunctionLayout_GetFunction((SlangReflectionFunctionLayout*) this);
+        }
+
+        TypeLayoutReflection* getReturnTypeLayout()
+        {
+            return (TypeLayoutReflection*) spReflectionFunctionLayout_GetReturnTypeLayout((SlangReflectionFunctionLayout*) this);
+        }
+
+        unsigned int getParameterCount()
+        {
+            return spReflectionFunctionLayout_GetParameterCount((SlangReflectionFunctionLayout*) this);
+        }
+
+        VariableLayoutReflection* getParameterByIndex(unsigned paramIndex)
+        {
+            return (VariableLayoutReflection*) spReflectionFunctionLayout_GetParameterByIndex((SlangReflectionFunctionLayout*) this, paramIndex);
+        }
+
+        char const* getName()
+        {
+            return getFunction()->getName();
+        }
+
+        bool hasDefaultValue(unsigned paramIndex)
+        {
+            return getFunction()->hasDefaultValue(paramIndex);
         }
     };
 
@@ -3616,11 +3701,33 @@ namespace slang
                 name);
         }
 
-        FunctionReflection* findFunctionByName(const char* name)
+        FunctionReflection* findFunctionByName(const char* name, int overloadIdx = -1)
         {
-            return (FunctionReflection*)spReflection_FindFunctionByName(
+            if (overloadIdx == -1)
+            {
+                return (FunctionReflection*)spReflection_FindFunctionByName(
+                    (SlangReflection*) this,
+                    name);
+            }
+            else
+            {
+                return (FunctionReflection*)spReflection_FindFunctionByNameAndOverloadIndex(
+                    (SlangReflection*) this,
+                    name,
+                    overloadIdx);
+            }
+        }
+
+        unsigned int getFunctionCount()
+        {
+            return spReflection_getFunctionCount((SlangReflection*) this);
+        }
+
+        FunctionReflection* getFunctionByIndex(unsigned int index)
+        {
+            return (FunctionReflection*)spReflection_getFunctionByIndex(
                 (SlangReflection*) this,
-                name);
+                index);
         }
 
         TypeLayoutReflection* getTypeLayout(
@@ -3630,6 +3737,16 @@ namespace slang
             return (TypeLayoutReflection*)spReflection_GetTypeLayout(
                 (SlangReflection*) this,
                 (SlangReflectionType*)type,
+                SlangLayoutRules(rules));
+        }
+
+        FunctionLayoutReflection* getFunctionLayout(
+            FunctionReflection* func,
+            LayoutRules         rules = LayoutRules::Default)
+        {
+            return (FunctionLayoutReflection*)spReflection_GetFunctionLayout(
+                (SlangReflection*) this,
+                (SlangReflectionFunction*)func,
                 SlangLayoutRules(rules));
         }
 
